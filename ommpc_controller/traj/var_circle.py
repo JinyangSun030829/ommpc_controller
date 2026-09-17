@@ -6,7 +6,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+import os
 # Parameters
 sample_time = 0.01             # seconds
 duration = 60                  # seconds
@@ -66,9 +66,10 @@ for i, time in enumerate(t):
 
 # Calculate velocity magnitude (for verification)
 calculated_v_magnitude = np.sqrt(traj[:, 3]**2 + traj[:, 4]**2)
-
+save_dir = os.path.expanduser('~/Sunray/External_Module/MPC_basic/src/ommpc_controller/ommpc_controller/traj')
+txt_save_path = os.path.join(save_dir, 'circle.txt')
 # write to txt
-np.savetxt('circle.txt', traj, fmt='%f')
+np.savetxt(txt_save_path, traj, fmt='%f')
 
 # Create visualization plots
 fig = plt.figure(figsize=(15, 10))

@@ -1,0 +1,78 @@
+<launch>
+    <arg name="dev_order" default="4"/>
+    <arg name="max_vel" default="5.2"/>
+    <arg name="max_acc" default="9.0"/>
+    <!-- Initial commissioning value, not a hardware-certified jerk limit. -->
+    <arg name="max_jerk" default="20.0"/>
+    <arg name="vis_enabled" default="true"/>
+    <arg name="result_color" default="always"/>
+    <arg name="planning_frame" default="world"/>
+    <!-- Legacy rviz_quad treats MAVROS map coordinates as world coordinates.
+         Empty this alias if map/world are not identical; no implicit TF is done. -->
+    <arg name="odom_frame_alias" default="map"/>
+    <!-- 1. 加载 URDF -->
+    <param name="robot_description" textfile="$(find ommpc_controller)/config/drone.urdf" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+    <!-- 2. 轨迹生成与导航节点 -->
+    <node pkg="ommpc_controller" type="trajectory_generator_node" name="trajectory_generator_node" output="screen" required="true">
+        <remap from="~waypoints" to="/waypoint_generator/waypoints"/>
+        <param name="planning/vel" type="double" value="$(arg max_vel)"/>
+        <param name="planning/acc" type="double" value="$(arg max_acc)"/>
+        <param name="planning/dev_order" type="int" value="$(arg dev_order)"/>
+        <param name="planning/max_jerk" type="double" value="$(arg max_jerk)"/>
+        <param name="planning/min_segment_time" value="0.001"/>
+        <param name="planning/compress_time" value="true"/>
+        <param name="planning/compression_budget_ms" value="50.0"/>
+        <param name="planning/compression_max_trials" value="32"/>
+        <param name="planning/hover/duration" value="1.0"/>
+        <param name="planning/status_interval" value="1.0"/>
+        <param name="planning/require_controller_ready" value="true"/>
+        <param name="planning/controller_status_max_age" value="1.0"/>
+        <param name="planning/controller_status_topic" value="/traj_tracking_controller/trajectory_admission_status"/>
+        <param name="planning/hover/max_speed" value="0.10"/>
+        <param name="planning/hover/max_position_span" value="0.05"/>
+        <param name="planning/hover/max_state_age" value="0.20"/>
+        <param name="planning/result_color" value="$(arg result_color)"/>
+        <param name="planning/frame_id" value="$(arg planning_frame)"/>
+        <param name="planning/odom_frame_alias" value="$(arg odom_frame_alias)"/>
+        <param name="odom/twist_frame" value="child"/>
+        <param name="odom/max_age" value="0.5"/>
+        <param name="planning/max_result_age" value="0.5"/>
+        <param name="planning/max_start_position_error" value="0.15"/>
+        <param name="planning/max_start_velocity_error" value="0.3"/>
+        <param name="vis/enabled" type="bool" value="$(arg vis_enabled)"/>
+        <param name="vis/sample_dt" value="0.05"/>
+        <param name="vis/max_points" value="2000"/>
+        <param name="vis/vis_traj_width" value="0.05"/>
+    </node>
+
+    <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+        <remap from="~goal" to="/goal"/>
+        <param name="waypoint_type" value="manual"/>
+    </node>
+
+    <!-- 3. 实时 TF 广播节点 (确保该文件里不要再有 os.system 调用 rospack) -->
+    <!-- 如果 rviz_quad.py 负责发 TF，确保它发布 child_frame_id 为 base_link -->
+    <node name="rviz_quad" pkg="ommpc_controller" type="rviz_quad.py" output="screen" />
+
+    <!-- 4. RViz 启动 (增加 -f world 强制设置 Fixed Frame，防止报错) -->
+   <node name="rviz" pkg="rviz" type="rviz" output="screen"
+      args="-d /home/yundrone/Sunray/External_Module/MPC_basic/src/ommpc_controller/ommpc_controller/config/test_rviz.rviz"/>
+
+      <!-- Real-time window length in seconds -->
+  <arg name="window_sec" default="20.0"/>
+
+  <!-- GUI refresh rate; topic recording frequency is unaffected -->
+  <!-- <arg name="plot_rate" default="20.0"/>
+
+  <node pkg="ommpc_controller"
+        type="dob_realtime_plot.py"
+        name="dob_realtime_plot"
+        output="screen"
+        required="false">
+    <param name="window_sec" value="$(arg window_sec)"/>
+    <param name="plot_rate" value="$(arg plot_rate)"/>
+    <param name="max_points" value="5000"/>
+  </node> -->
+</launch>

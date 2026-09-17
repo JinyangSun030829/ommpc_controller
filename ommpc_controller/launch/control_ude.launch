@@ -1,0 +1,15 @@
+<launch>
+  <arg name="state_source" default="odom" />
+  <arg name="config_file"
+       default="$(find ommpc_controller)/config/traj_tracking_controller.yaml" />
+
+  <node pkg="ommpc_controller"
+        type="traj_tracking_controller_fsm"
+        name="traj_tracking_controller"
+        output="screen">
+    <rosparam command="load" file="$(arg config_file)" />
+    <rosparam command="load" file="$(find ommpc_controller)/config/flight_box.yaml" />
+    <!-- The launch argument overrides the YAML default for quick switching. -->
+    <param name="state_source" value="$(arg state_source)" />
+  </node>
+</launch>

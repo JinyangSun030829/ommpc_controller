@@ -1,0 +1,127 @@
+# Unified trajectory tracking controller configuration.
+# State source: "odom" uses MAVROS odometry pose and velocity; "mocap" uses
+# the motion-capture pose plus MAVROS velocity_local.
+state_source: odom
+# odom：位置、姿态和速度都使用MAVROS里程计。
+# mocap：位置和姿态使用动捕，速度使用MAVROS速度话题
+topics:
+  mavros_namespace: /uav1/mavros
+  odom: /uav1/mavros/local_position/odom
+  mocap_pose: /vrpn_client_node_1/uav1/pose
+  mocap_velocity: /uav1/mavros/local_position/velocity_local
+  vision_pose: /uav1/mavros/vision_pose/pose
+  trajectory: /planning/poly_trajectory
+
+state:
+  # These two switches explicitly rotate the received body-frame velocity into
+  # the world frame with the attitude supplied by the selected state source.
+  odom_velocity_in_body: true
+  mocap_velocity_in_body: false
+# 设为true时，程序认为接收到的是机体系速度，并利用当前姿态旋转到世界系。
+# 如果相应话题本身已经是世界系速度，应设置为false，否则会发生重复坐标变换。
+control:
+  rate: 100.0
+  state_timeout: 0.10
+  state_command_hold_time: 0.20
+  print_interval: 1.0
+  mass: 1.5
+  gravity: 9.81
+  hover_thrust: 0.21
+  kp_x: 4.0
+  kp_y: 4.0
+  kp_z: 5.0
+  kd_x: 5.0
+  kd_y: 5.0
+  kd_z: 6.0
+  max_acceleration: 18.0
+  max_tilt_deg: 65.0
+  min_vertical_force_ratio: 0.5
+  max_vertical_force_ratio: 3.0
+  min_thrust_command: 0.04
+  max_thrust_command: 0.90
+# rate：控制频率，单位Hz。
+# state_timeout：状态最大延迟；失效后最多保持state_command_hold_time，再停止输出并锁定。
+# print_interval：终端状态打印周期。
+# mass：无人机质量。
+# gravity：重力加速度。
+# hover_thrust：归一化悬停油门。
+# kp_x/y/z：位置误差比例增益。
+# kd_x/y/z：速度误差增益。
+# max_acceleration：各轴标称控制加速度限制。
+# max_tilt_deg：最大期望倾斜角。
+# min_vertical_force_ratio：最小竖直力相对重力的比例。
+# max_vertical_force_ratio：最大竖直力相对重力的比例。
+# min_thrust_command：最小归一化推力。
+# max_thrust_command：最大归一化推力。
+ude:
+  enabled: true
+  tau_x: 1.0
+  tau_y: 1.0
+  tau_z: 1.0
+  max_integral: 6.0
+  # Compatibility only: no absolute velocity integral clipping in the new UDE.
+  max_estimate: 12.0
+  ramp_time: 1.0
+  # UDE is initialized only after both conditions are true relative to the
+  # takeoff pose sampled after arming.
+  liftoff_height: 0.05
+  liftoff_vz: 0.05
+  # Disable UDE below this height relative to the recorded takeoff ground Z.
+  landing_disable_height: 0.10
+  landing_reenable_height: 0.25
+# enabled：是否启用UDE补偿。
+# tau_x/y/z：各轴UDE时间常数。数值越大，估计通常越弱、变化越慢。
+# max_integral：兼容旧配置保留，新观测器不再使用绝对速度积分限幅。
+# max_estimate：扰动估计最大值。
+# ramp_time：UDE启用后从零逐渐增加到完整补偿的时间。
+# liftoff_height：离地判定所需的最小相对高度。
+# liftoff_vz：离地判定所需的最小向上速度。
+# landing_disable_height：降落时低于该相对高度后关闭UDE
+takeoff:
+  # Absolute world-frame target Z (not a relative climb height).
+  altitude: 2.0
+  speed: 0.33
+  tolerance: 0.10
+# altitude：世界坐标系绝对目标高度，不是相对起飞高度。
+# speed：Z轴匀速上升速度。
+# tolerance：实际高度进入目标高度多少范围内时，判定起飞完成。
+braking:
+  max_acceleration: 3.0
+  max_jerk: 4.0
+  position_tolerance: 0.15
+
+landing:
+  # 是否允许在多项式轨迹执行中接受 LAND：true 开启，false 拒绝并继续轨迹。
+  # 可运行时通过 rosparam set 修改；不影响悬停降落，也不取消已接受的降落流程。
+  # rosparam set /traj_tracking_controller/landing/allow_during_trajectory false
+  allow_during_trajectory: true
+  speed: 0.25
+  max_acceleration: 0.50
+  max_jerk: 1.0
+  extended_state_timeout: 2.0
+  # Landing reference ends 0.10 m below the takeoff ground Z.
+  target_offset: -0.10
+  touchdown_height: 0.08
+  touchdown_max_vz: 0.10
+  touchdown_max_vxy: 0.10
+  touchdown_confirm_time: 0.50
+  thrust_unload_time: 0.80
+  touchdown_thrust: 0.05
+# speed：Z轴下降速度。
+# target_offset：相对于起飞初始Z的降落目标偏移。-0.10表示目标在起飞初始Z下方0.1m。
+# touchdown_height：接地候选判定的相对高度。
+# touchdown_max_vz：接地判定允许的最大垂向速度。
+# touchdown_max_vxy：接地判定允许的最大水平速度。
+# touchdown_confirm_time：接地条件需要连续保持的时间。
+# thrust_unload_time：接地后推力平滑下降时间。
+# touchdown_thrust：接地后的最终低推力。
+mavros:
+  service_retry_interval: 1.0
+# ARM或DISARM请求失败时，两次服务调用之间的等待时间。
+trajectory:
+  use_end_for_hover: true
+# true：轨迹自然结束后，在多项式理论终点悬停。
+# false：轨迹结束后，在无人机当时的实际位置悬停
+bag:
+  enabled: true
+  directory: /home/yundrone/uav_logs

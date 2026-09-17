@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="drone">
+  <!-- 定义一个虚拟的 base_link -->
+  <link name="base_link">
+    <visual>
+      <!-- 将原点调整到模型中心，如果模型显示偏移，可以修改 origin -->
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!-- 核心部分：指向你的 .dae 文件路径 -->
+        <mesh filename="file:///home/yundrone/Sunray/External_Module/MPC_basic/src/ommpc_controller/ommpc_controller/config/tello.dae" scale="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+  </link>
+</robot>

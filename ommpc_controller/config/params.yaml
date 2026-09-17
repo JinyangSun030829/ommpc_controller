@@ -1,12 +1,62 @@
-takeoff_height: 0.8
-takeoff_land_speed: 0.2
+# Flight state machine
+control:
+  # Maximum allowed age of odometry used by the controller, in seconds.
+  state_timeout: 0.10
+
+mavros:
+  # Minimum interval between repeated ARM or DISARM service requests.
+  service_retry_interval: 1.0
+
+takeoff:
+  # Absolute target Z in the world frame, not a relative climb height.
+  altitude: 2.0
+  speed: 0.33
+  tolerance: 0.10
+  # Liftoff is confirmed only when both conditions are true relative to the
+  # position sampled after ARM succeeds.
+  liftoff_height: 0.05
+  liftoff_vz: 0.05
+
+landing:
+  # 是否允许在多项式或 TXT 轨迹执行中接受 LAND：true 开启，false 拒绝并继续轨迹。
+#  rosparam set /ommpc_controller/landing/allow_during_trajectory false
+  # 可运行时通过 rosparam set 修改；不影响悬停降落，也不取消已接受的降落流程。
+  allow_during_trajectory: true
+  speed: 0.25
+  # Smooth descent limits (m/s^2 and m/s^3).
+  max_acceleration: 0.50
+  max_jerk: 1.0
+  # Require a fresh MAVROS ON_GROUND report before unloading/disarming.
+  extended_state_timeout: 2.0
+  # Final reference Z = takeoff initial Z + target_offset.
+  target_offset: -0.10
+  touchdown_height: 0.08
+  touchdown_max_vz: 0.10
+  touchdown_max_vxy: 0.10
+  touchdown_confirm_time: 0.50
+  thrust_unload_time: 0.80
+  touchdown_thrust: 0.05
+
+braking:
+  # Bounds for stopping an interrupted/completed trajectory.
+  max_acceleration: 3.0
+  max_jerk: 4.0
+  position_tolerance: 0.15
+
+trajectory:
+  hover:
+    # LAND is allowed only after continuously satisfying this window.
+    duration: 1.0
+    max_speed: 0.10
+    max_position_span: 0.05
+    max_state_age: 0.20
 
 ref_txt:
-    enable: true
+    enable: false
     time_step: 0.01
     ref_filename: "/traj/circle.txt"
 
-hover_percentage: 0.705
+hover_percentage: 0.21
 
 # NMPC
 use_fix_yaw: true
@@ -26,7 +76,7 @@ MPC_params:
     Q_pos_z:  800.0    # Cost for horizontal positon error //default: 200     0.5 
     Q_attitude_rp:  40.0   # Cost for attitude error           //default: 50     0.1
     Q_attitude_yaw:  40.0    # Cost for attitude error           //default: 50     0.1
-    Q_velocity:  20.0   # Cost for velocity error           //default: 10    0.05
+    Q_velocity:  60.0   # Cost for velocity error           //default: 10    0.05
     # 60 steps
     # Q_pos_xy:   8.0    # Cost for horizontal positon error //default: 200     0.5 
     # Q_pos_z:  100.0    # Cost for horizontal positon error //default: 200     0.5 
@@ -34,8 +84,8 @@ MPC_params:
     # Q_attitude_yaw:  10.0    # Cost for attitude error           //default: 50     0.1
     # Q_velocity:  0.1   # Cost for velocity error           //default: 10    0.05
     # Cost on inputs
-    R_thrust:    0.5  # Cost on thrust input            //default: 1
-    R_pitchroll:  1.2      # Cost on pitch and roll rate
+    R_thrust:    1  # Cost on thrust input            //default: 1
+    R_pitchroll:  2      # Cost on pitch and roll rate
     R_yaw:        0.6      # Cost on yaw rate
     state_cost_exponential: 0.5     # Scaling for state costs
     input_cost_exponential: 0.5     # scaling for input costs
@@ -44,3 +94,33 @@ MPC_params:
     max_bodyrate_z:     4.0       #  [rad/s]
     min_thrust:         1.0       #  [m/s^2]
     max_thrust:         30.0      #  [m/s^2]
+
+DOB:
+  # 是否启用平移扰动观测与前馈补偿
+  enable: true
+
+  # 线性 ESO 初始参数
+  # 后续替换为 FxTDO 后可以重新定义其含义
+  l1: 3.0
+  l2: 3.0
+
+  # 扰动估计低通时间常数，单位 s
+  lpf_tau: 0.03
+
+  # 扰动导数滤波应更强
+  derivative_lpf_tau: 0.1
+
+  # 最大补偿扰动加速度，单位 m/s^2
+  max_acc: 5.0
+
+  # 最大扰动变化率，单位 m/s^3
+  max_jerk: 10.0
+
+  # 补偿从 0 渐入到 1 的时间，单位 s
+  ramp_time: 1.0
+
+  landing_disable_height: 0.10
+  # 推力命令到实际推力的估计延迟，单位 s
+  # 仿真初期可以先设为 0.0
+  # 实机可以从 0.035~0.045 开始
+  input_delay: 0
